@@ -1,11 +1,18 @@
-# GTA VI Twitch CCU forecast — make.fun bounty entry (local build)
+# GTA VI Twitch CCU forecast
 
-Bounty: **Forecast GTA VI's launch-day Twitch viewers hour by hour**
-— https://make.fun/bounty/gta6-twitch-ccu-forecast-01 — $250, 20 places paid.
+[![make.fun · gta6-twitch-ccu-forecast-01](https://make.fun/badge/gta6-twitch-ccu-forecast-01.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-twitch-ccu-forecast-01)
+[![rank](https://make.fun/badge/gta6-twitch-ccu-forecast-01/adhiejoey/makefun-gta6-forecast/rank.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-twitch-ccu-forecast-01)
+[![reward](https://make.fun/badge/gta6-twitch-ccu-forecast-01/adhiejoey/makefun-gta6-forecast/reward.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-twitch-ccu-forecast-01)
+
+Forecast GTA VI's launch-day Twitch viewers hour by hour, built for
+make.fun's **GTA VI Twitch CCU forecast** bounty
+(`gta6-twitch-ccu-forecast-01`, $250, 20 places paid) —
+https://make.fun/bounty/gta6-twitch-ccu-forecast-01.
 Deadline: **Thu 19 Nov 2026 01:00 UTC / 08:00 WIB**. No entry fee.
 
-> Status: **built and tested locally only.** Not submitted, not pushed to
-> GitHub, nothing signed or paid. See "Still missing for submission" below.
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=mcpf7r82&utm_source=github&utm_medium=readme&utm_campaign=gta6-twitch-ccu-forecast-01) · AI agents build software for cash rewards</sub>
 
 ## What it does
 
@@ -17,16 +24,21 @@ forecasts hours 2–24 as five quantiles each (5%, 25%, 50%, 75%, 95%).
 Run it:
 
 ```sh
-python3 main.py /input/<id>.in /output/<id>.out
-# or: python3 main.py /input/<id>.in
-# or: python3 main.py            # scans /input/*.in, then input/*.in
+python3 main.py            # scans the input dir, writes one .out per .in
+# or: python3 main.py /input/<id>.in /output/<id>.out
 ```
 
-Output: 23 lines, one per hour 2–24 in order, each line five
-space-separated non-negative integers, `q05 q25 q50 q75 q95`. No header,
-no hour column. Runs in well under 1 s on 1 CPU.
+Input: JSON `{"schema": "makefun/twitch-ccu-case/v1", ...}` — `known`
+holds hour 1's print `{hour: 1, viewers, ...}` and `forecast` lists the
+hours to forecast, 2–24. Output: JSON
+`{"hours": [{"hour": 2, "q": [q05, q25, q50, q75, q95]}, ...]}` — exactly
+23 rows, hours 2..24 each once, each q five positive finite numbers
+(≤ 1e9), non-decreasing, rounded to 2 decimals half up. Runs in well
+under 1 s on 1 CPU. Outside the grader's container,
+`MAKEFUN_INPUT_DIR` / `MAKEFUN_OUTPUT_DIR` stand in for `/input` and
+`/output`.
 
-## Spec confirmed from the bounty page (17 Nov 2026)
+## Spec confirmed from the bounty page and the kit (17 Nov 2026)
 
 - Task: forecast mean Twitch CCU per hour, hours 2–24 of 2026-11-19 (UTC),
   from everything recorded before the cut plus the hour-1 count. An hour's
@@ -84,21 +96,20 @@ to know the future.
    rewards when the median is honest: too narrow and a miss is punished
    hard; too wide and every quantile is far from the truth.
 
-## Input format — assumption, flagged honestly
+## Input format — verified against the kit
 
-The bounty page states the case contents but **does not publish a
-byte-level `.in` schema**, and the competition kit download returned no
-usable content when fetched. So `main.py` parses flexibly instead of
-assuming one exact layout: a JSON object (`hour1` / `ccu` / `viewers` /
-`count` / `value`, or a `minutes` list whose mean is hour 1, or an
-`hourly` list whose last value is hour 1), a JSON array (one number, or
-minute reads → mean, or hourly values → last), or plain text (one number
-per line, or `key: value` lines; a leading case-id/label line is ignored).
-**Verified 17 Nov 2026 ~20:20 WIB against the live bounty page:**
-the output format is confirmed — hours 2–24, five quantiles each
-(23 lines, no header), program writes `/output/<id>.out` for the case
-`/input/<id>.in`. The exact `.in` byte schema is still unpublished, so
-the flexible parser above is the remaining technical risk.
+The first build guessed the `.in` format from the bounty page and got it
+wrong: its flexible parser read the kit practice cases' hour 1 as 0.95
+(the `levels` list's last value) and wrote plain-text lines instead of
+the required JSON. Fixed 17 Nov 2026 after downloading the competition
+kit: `main.py` now reads the real `makefun/twitch-ccu-case/v1` schema
+(`known` row for hour 1, `forecast` hours 2–24) and writes the required
+JSON `{"hours": [...]}` output. Verified on all four kit practice cases
+(p00 Marvel's Wolverine, hour 1 = 23,357; p01 Red Dead Redemption 2,
+116,550; p02 God of War Ragnarök, 269,517; p03 Marvel's Spider-Man 2,
+119,087) — correct hour-1 anchor and valid JSON output on each. The
+kit's scorer/reference data are not published, so practice cases are
+graded on the server only (`grade-local` refuses program/v1 kits).
 
 ## Tests
 
@@ -111,20 +122,6 @@ Cases: `case-a` hour 1 = 850,000 (plain number); `case-b` hour 1 =
 1,250,000 (JSON with a 60-minute series, mean = 1,250,000);
 `case-c` hour 1 = 12,000 (labelled `ccu: 12000` text). All checks passed
 locally on 17 Nov 2026 — see `TESTS.md` for the exact outputs.
-
-## Still missing for submission
-
-- A public GitHub repo owned by the entrant, created after
-  2026-11-17T06:00:00Z, with this code + `LICENSE` (MIT, included here)
-  at its root, pushed; `.makefun/owner.json` if the repo owner is not
-  the make.fun account's GitHub login.
-- The AI-agent transcripts (bundle) of the sessions that built it.
-- A make.fun account + Solana wallet, entry message signed, submitted
-  via the kit CLI before Thu 19 Nov 2026 01:00 UTC.
-- Verification of the exact `.in`/`.out` format against the kit's sample
-  cases, and a practice-score check if the platform shows one.
-- Optional: calibrate the hump/decay against real past-launch Twitch
-  curves if such data becomes available; the current shape is generic.
 
 ## Licence
 

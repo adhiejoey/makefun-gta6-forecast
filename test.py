@@ -2,7 +2,8 @@
 
 Builds 3 synthetic /input cases, runs main.py twice on each, and checks:
   * exit code 0, output written, runtime well under 8 s
-  * 23 lines x 5 non-negative integers (hours 2..24)
+  * JSON {"hours": [...]}: 23 rows, hours 2..24 each once, 5 positive
+    finite numbers per row, at most 1e9 (the grader's format)
   * quantiles non-decreasing within each row (monotonic)
   * median (q50) follows the documented hump: rises to a peak around
     hours 11-12, then falls; hour-24 median < hour-1 anchor
@@ -58,15 +59,17 @@ def run_case(name, text):
 
 
 def check_case(name, raw, dt):
-    lines = [ln for ln in raw.strip().splitlines() if ln.strip()]
-    assert len(lines) == 23, f"{name}: {len(lines)} lines, expected 23"
+    data = json.loads(raw)
+    assert set(data) == {"hours"}, f"{name}: top-level keys {set(data)}, expected {{'hours'}}"
+    assert len(data["hours"]) == 23, f"{name}: {len(data['hours'])} rows, expected 23"
+    assert [r["hour"] for r in data["hours"]] == list(range(2, 25)), f"{name}: hours not 2..24 in order"
     rows = []
-    for i, ln in enumerate(lines):
-        parts = ln.split()
-        assert len(parts) == 5, f"{name} line {i+1}: {len(parts)} values, expected 5"
-        vals = [int(p) for p in parts]
-        assert all(v >= 0 for v in vals), f"{name} line {i+1}: negative value"
-        assert vals == sorted(vals), f"{name} line {i+1}: not monotonic: {vals}"
+    for i, r in enumerate(data["hours"]):
+        assert set(r) == {"hour", "q"}, f"{name} row {i}: keys {set(r)}"
+        vals = r["q"]
+        assert len(vals) == 5, f"{name} row {i}: {len(vals)} values, expected 5"
+        assert all(isinstance(v, (int, float)) and v > 0 and v <= 1e9 for v in vals), f"{name} row {i}: bad value {vals}"
+        assert vals == sorted(vals), f"{name} row {i}: not monotonic: {vals}"
         rows.append(vals)
     medians = [r[2] for r in rows]
     anchor = ANCHOR[name]
@@ -112,7 +115,8 @@ def main():
         + "\nChecks per case: 23 lines x 5 non-negative integers; quantiles "
           "non-decreasing per row; median hump peaks hours 10-13 at 1.20-1.35x "
           "anchor; hour-24 median below anchor; 90% band widens with horizon; "
-          "two runs byte-identical; runtime < 8 s.\n",
+          "two runs byte-identical; runtime < 8 s; output is the grader's "
+          "JSON {\"hours\": [{\"hour\", \"q\": [...]}]} format.\n",
         encoding="utf-8",
     )
     print("ALL TESTS PASSED (3 cases, deterministic, monotonic, valid quantiles)")
